@@ -1,0 +1,10 @@
+*.bag
+src/pointpillars_ros/tools/2011_09_26
+/build
+/devel
+*.pth
+*.log
+**__pycache__**
+**build**
+**egg-info**
+**dist**

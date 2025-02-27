@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="rosbag" type="play" name="player" output="log" args="-l -r 0.5 /home/pointpillars_ros/src/pointpillars_ros/tools/kitti_2011_09_26_drive_0001_synced.bag" />
+  <node name="part_ros" type="ros_part.py" pkg="pointpillars_ros" output="screen"/>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pointpillars_ros)/launch/part.rviz" />
+</launch>
