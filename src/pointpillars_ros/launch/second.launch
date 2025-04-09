@@ -1,5 +1,11 @@
 <launch>
-  <node pkg="rosbag" type="play" name="player" output="log" args="-l -r 0.5 /home/pointpillars_ros/src/pointpillars_ros/tools/kitti_2011_09_26_drive_0001_synced.bag" />
-  <node name="second_ros" type="ros_second.py" pkg="pointpillars_ros" output="screen"/>
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pointpillars_ros)/launch/second.rviz" />
+ <param name="use_sim_time" value="true"/>
+ <node pkg="rosbag" type="play" name="player" output="log" args="-l --pause -r 0.5 /home/pointpillars_ros/src/pointpillars_ros/tools/kitti_2011_09_26_drive_0005_synced.bag" />
+  <!-- <node pkg="tf" type="static_transform_publisher" name="lidar2baselink" output="log" args="1 0 1 0 0 0 /base_link /rslidar 50" /> -->
+  <!-- 在每次启动时重置TF /home/pointpillars_ros/src/pointpillars_ros/tools/kitti_2011_09_26_drive_0005_synced.bag /media/20250401/val20250401pm15.bag-->
+  <node name="second_ros" type="ros_second.py" pkg="pointpillars_ros" output="screen"
+        respawn="true" respawn_delay="1" />
+  <param name="tf_publish_rate" value="10" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pointpillars_ros)/launch/second2.rviz" />
 </launch>
+

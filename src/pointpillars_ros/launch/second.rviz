@@ -8,6 +8,8 @@ Panels:
         - /Status1
         - /PointCloud21
         - /BoundingBoxArray1
+        - /MarkerArray1
+        - /MarkerArray2
       Splitter Ratio: 0.5
     Tree Height: 235
   - Class: rviz/Selection
@@ -102,6 +104,32 @@ Visualization Manager:
       line width: 0.20000000298023224
       only edge: true
       show coords: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /visualization_marker_array
+      Name: MarkerArray
+      Namespaces:
+        tracked_objects: true
+        tracked_objects_text: true
+      Queue Size: 10
+      Value: true
+      alpha: 0.800000011920929
+      color: 255; 25; 0
+      coloring: Flat color
+      line width: 0.20000000298023224
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /visualization_history_array
+      Name: MarkerArray
+      Namespaces:
+        history_objects: true
+      Queue Size: 10
+      Value: true
+      alpha: 0.800000011920929
+      color: 255; 25; 0
+      coloring: Flat color
+      line width: 0.20000000298023224
+
     - Class: rviz/Image
       Enabled: true
       Image Topic: /kitti/camera_color_left/image_raw

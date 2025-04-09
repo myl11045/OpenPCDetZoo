@@ -28,6 +28,9 @@ from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
 from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
+from sort import SORT3D
+from geometry_msgs.msg import Point
+from std_msgs.msg import ColorRGBA
 
 class DemoDataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None, ext='.bin'):
@@ -50,6 +53,7 @@ class Pointpillars_ROS:
     def __init__(self):
         config_path, ckpt_path = self.init_ros()
         self.init_pointpillars(config_path, ckpt_path)
+        self.sort3d_tracker = SORT3D(max_age=3, min_hits=3)
         self.last_time = time.time()
         # print("init ros")
         self.frame_count = 0
@@ -69,6 +73,7 @@ class Pointpillars_ROS:
         self.sub_velo = rospy.Subscriber("/kitti/velo/pointcloud", PointCloud2, self.lidar_callback, queue_size=2,  buff_size=2**12)
         self.pub_bbox = rospy.Publisher("/detections", BoundingBoxArray, queue_size=2)
         # self.pub_marker = rospy.Publisher('/visualization_Marker', MarkerArray, queue_size=1)
+        self.marker_pub = rospy.Publisher('/visualization_marker_array', MarkerArray, queue_size=2)
         print(ckpt_path)
         return config_path, ckpt_path
 
@@ -93,7 +98,6 @@ class Pointpillars_ROS:
     def rotate_mat(self, axis, radian):
         rot_matrix = linalg.expm(np.cross(np.eye(3), axis / linalg.norm(axis) * radian))
         return rot_matrix
-
 
     def lidar_callback(self, msg):
         """ Captures pointcloud data and feed into second model for inference """
@@ -150,12 +154,7 @@ class Pointpillars_ROS:
         #calculate FPS
         call_end_time = time.time()
         time_elapsed = call_end_time - call_time
-        # if time_elapsed > 0.1:
-        #     self.fps = self.frame_count / time_elapsed
-        #     self.frame_count = 0
-        #     rospy.loginfo("FPS: %.2f, Total time: %.4f seconds, \nProcessing data Time: %.4f seconds, Inference Time: %.4f seconds", self.fps, time_elapsed, preprocess_time, inference_time)
-
-
+    
         self.total_time_elapsed += time_elapsed  # 累计总时间
         self.total_frames += 1 # 累加 FPS
         # 每1秒输出一次平均数据
@@ -179,15 +178,23 @@ class Pointpillars_ROS:
         boxes_lidar = pred_dicts[0]['pred_boxes'][mask].detach().cpu().numpy()
         label = pred_dicts[0]['pred_labels'][mask].detach().cpu().numpy()
         num_detections = boxes_lidar.shape[0]
-        # rospy.loginfo("The num is: %d ", num_detections)
+        rospy.loginfo("The num is: %d ", num_detections)
 
         # print(boxes_lidar)
         # print(scores)
-        # print(label)
+        print('label',label)
 
         # calculate speed
         # current_time = time.time()
         # _time = current_time - self.prev_time if self.prev_time else 0.1
+
+        # 更新SORT3D跟踪器
+        # print('box lidar',boxes_lidar.shape)
+        tracked_objects = self.sort3d_tracker.update(boxes_lidar)
+        if len(tracked_objects)>0 :
+            print('tracked objects', tracked_objects.shape)
+            # Visualize the results in RViz
+            self.visualize(tracked_objects)
 
         box_time = time.time()
         arr_bbox = BoundingBoxArray()
@@ -211,64 +218,67 @@ class Pointpillars_ROS:
             bbox.value = scores[i]
             bbox.label = label[i]
 
-            # if label[i] in self.prev_bboxes:
-            #     prev_bbox = self.prev_bboxes[label[i]]
-            #     _x = bbox.pose.position.x - prev_bbox[0]
-            #     _y = bbox.pose.position.y - prev_bbox[1]
-            #     _z = bbox.pose.position.z - prev_bbox[2]
-
-            #     velocity = np.sqrt(_x**2+_y**2+_z**2)/_time
-
-                # marker = Marker()
-                # marker.header.frame_id = msg.header.frame_id
-                # marker.header.stamp = rospy.Time.now()
-                # marker.id = i
-                # marker.type = Marker.CUBE
-                # marker.action = Marker.ADD
-                # marker.pose.position.x = bbox.pose.position.x
-                # marker.pose.position.y = bbox.pose.position.y
-                # marker.pose.position.z = bbox.pose.position.z
-                # marker.scale.x = bbox.dimensions.x
-                # marker.scale.y = bbox.dimensions.y
-                # marker.scale.z = bbox.dimensions.z
-                # marker.color.a =1.0
-                # marker.color.r =0.0
-                # marker.color.g =1.0
-                # marker.color.b =0.0
-
-                # t_marker = Marker()
-                # t_marker.header.frame_id = msg.header.frame_id
-                # t_marker.header.stamp = rospy.Time.now()
-                # t_marker.id = i + 1000
-                # t_marker.type = Marker.TEXT_VIEW_FACING
-                # t_marker.action = Marker.ADD
-                # t_marker.pose.position.x = bbox.pose.position.x
-                # t_marker.pose.position.y = bbox.pose.position.y
-                # t_marker.pose.position.z = bbox.pose.position.z + bbox.dimensions.z/2 + 0.5
-                # t_marker.scale.z = 0.5
-                # t_marker.color.a =1.0
-                # t_marker.color.r =1.0
-                # t_marker.color.g =1.0
-                # t_marker.color.b =1.0
-                # t_marker.text = f"Velocity: {velocity:.2f} m/s"
-
-                # marker_arr.markers.append(marker)
-                # marker_arr.markers.append(t_marker)
-
-            # self.prev_bboxes[label[i]] = (bbox.pose.position.x, bbox.pose.position.y, bbox.pose.position.z)
-
             arr_bbox.boxes.append(bbox)
         
         arr_bbox.header.frame_id = msg.header.frame_id
         arr_bbox.header.stamp = rospy.Time.now()
 
-        #update time
+        # update time
         # self.prev_time = current_time
-        # rospy.loginfo("boundingbox time: %.4f", time.time()-call_time)
+        rospy.loginfo("boundingbox time: %.4f", time.time()-call_time)
         
         self.pub_bbox.publish(arr_bbox)
         
         # self.pub_marker.publish(marker_arr)
+
+    def clear_markers(self):
+        # 创建一个MarkerArray消息，用于删除所有旧的标记
+        clear_marker = MarkerArray()
+        marker = Marker()
+        marker.action = Marker.DELETEALL
+        clear_marker.markers.append(marker)
+        self.marker_pub.publish(clear_marker)
+
+    def visualize(self, tracked_objects):
+        self.clear_markers()
+        marker_array = MarkerArray()
+        for obj in tracked_objects:
+            # 创建立方体标记
+            cube_marker = Marker()
+            cube_marker.header.frame_id = "velo_link"
+            cube_marker.header.stamp = rospy.Time.now()
+            cube_marker.ns = "tracked_objects"
+            cube_marker.id = int(obj[0])
+            cube_marker.type = Marker.CUBE
+            cube_marker.action = Marker.ADD
+            cube_marker.pose.position = Point(obj[1], obj[2], obj[3])
+            q = Quaternion(axis=(0, 0, 1), radians=float(obj[7]))
+            cube_marker.pose.orientation.x = q.x
+            cube_marker.pose.orientation.y = q.y
+            cube_marker.pose.orientation.z = q.z
+            cube_marker.pose.orientation.w = q.w
+            cube_marker.scale.x = obj[4]
+            cube_marker.scale.y = obj[5]
+            cube_marker.scale.z = obj[6]
+            cube_marker.color = ColorRGBA(0, 1, 0, 1)  # Green color for tracked objects
+            marker_array.markers.append(cube_marker)
+
+            # 创建文本标记
+            text_marker = Marker()
+            text_marker.header.frame_id = "velo_link"
+            text_marker.header.stamp = rospy.Time.now()
+            text_marker.ns = "tracked_objects_text"
+            text_marker.id = int(obj[0]) + 1000  # 确保文本标记的 ID 不与立方体标记冲突
+            text_marker.type = Marker.TEXT_VIEW_FACING
+            text_marker.action = Marker.ADD
+            text_marker.pose.position = Point(obj[1]+obj[4]/2, obj[2]+obj[5]/2, obj[3] + obj[6]/2)  # 将文本稍微提高以避免与立方体重叠
+            text_marker.scale.z = 2  # 设置文本大小
+            text_marker.color = ColorRGBA(1, 1, 1, 1)  # White color for text
+            text_marker.text = f"ID: {int(obj[0])}"
+            marker_array.markers.append(text_marker)
+
+            # 发布文本标记
+        self.marker_pub.publish(marker_array)
 
 
 if __name__ == '__main__':

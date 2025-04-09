@@ -107,6 +107,19 @@ Visualization Manager:
       line width: 0.20000000298023224
       only edge: true
       show coords: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Topic: /visualization_marker
+      Unreliable: false
+      Value: true
+      Queue Size: 10
+      alpha: 0.800000011920929
+      color: 255; 25; 0
+      coloring: Flat color
+      line width: 0.20000000298023224
+      only edge: true
+      show coords: false
     - Class: rviz/Image
       Enabled: true
       Image Topic: /kitti/camera_color_left/image_raw

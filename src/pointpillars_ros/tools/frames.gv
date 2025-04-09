@@ -1,0 +1,13 @@
+digraph G {
+"base_link" -> "imu_link"[label="Broadcaster: /player\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1743065622.041 sec old)\nBuffer length: 0.000 sec\n"];
+"world" -> "base_link"[label="Broadcaster: /player\nAverage rate: 10.137 Hz\nMost recent transform: 1317071088.150 ( 425994533.891 sec old)\nBuffer length: 2.170 sec\n"];
+"imu_link" -> "velo_link"[label="Broadcaster: /player\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1743065622.041 sec old)\nBuffer length: 0.000 sec\n"];
+"imu_link" -> "camera_gray_left"[label="Broadcaster: /player\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1743065622.041 sec old)\nBuffer length: 0.000 sec\n"];
+"imu_link" -> "camera_gray_right"[label="Broadcaster: /player\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1743065622.041 sec old)\nBuffer length: 0.000 sec\n"];
+"imu_link" -> "camera_color_left"[label="Broadcaster: /player\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1743065622.041 sec old)\nBuffer length: 0.000 sec\n"];
+"imu_link" -> "camera_color_right"[label="Broadcaster: /player\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1743065622.041 sec old)\nBuffer length: 0.000 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1743065622.041"[ shape=plaintext ] ;
+ }->"world";
+}

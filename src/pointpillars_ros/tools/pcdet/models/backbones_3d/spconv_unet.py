@@ -6,7 +6,7 @@ import torch.nn as nn
 from ...utils.spconv_utils import replace_feature, spconv
 from ...utils import common_utils
 from .spconv_backbone import post_act_block
-
+device = torch.device("cuda")
 
 class SparseBasicBlock(spconv.SparseModule):
     expansion = 1
